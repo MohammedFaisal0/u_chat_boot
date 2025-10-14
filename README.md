@@ -492,132 +492,6 @@ Authorization: Bearer <token>
   "priority": "low|medium|high"
 }
 ```
-
----
-
-## 🌐 النشر
-
-### **النشر على Vercel**
-
-1. **ربط GitHub Repository:**
-
-   - اذهب إلى [Vercel](https://vercel.com)
-   - سجل دخول بحساب GitHub
-   - اضغط "New Project"
-   - اختر repository المشروع
-
-2. **إعداد متغيرات البيئة:**
-
-   ```
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
-   GROQ_API_KEY=your-groq-api-key-here
-   JWT_SECRET=your-super-secret-jwt-key-here
-   NODE_ENV=production
-   ```
-
-3. **النشر:**
-   - اضغط "Deploy"
-   - انتظر اكتمال النشر
-   - احصل على رابط التطبيق
-
-### **النشر على Railway**
-
-1. **ربط GitHub Repository:**
-
-   - اذهب إلى [Railway](https://railway.app)
-   - سجل دخول بحساب GitHub
-   - اضغط "New Project"
-   - اختر "Deploy from GitHub repo"
-
-2. **إعداد متغيرات البيئة:**
-
-   - اذهب إلى "Variables" tab
-   - أضف جميع متغيرات البيئة المطلوبة
-
-3. **النشر:**
-   - اضغط "Deploy"
-   - انتظر اكتمال النشر
-
-### **النشر مع Docker**
-
-```bash
-# بناء الصورة
-docker build -t uni-chat-bot .
-
-# تشغيل الحاوية
-docker run -p 3000:3000 \
-  -e MONGODB_URI=mongodb://host.docker.internal:27017/uni-chat-bot \
-  -e GROQ_API_KEY=your-groq-api-key \
-  -e JWT_SECRET=your-jwt-secret \
-  uni-chat-bot
-```
-
-### **النشر مع Docker Compose**
-
-```bash
-# إنشاء ملف .env
-cp env.example .env
-
-# تعديل .env بالمفاتيح الحقيقية
-# تشغيل التطبيق
-docker-compose up -d
-```
-
----
-
-## 🤝 المساهمة
-
-نرحب بمساهماتكم في تطوير هذا المشروع! إليك كيفية المساهمة:
-
-### **1. Fork المشروع**
-
-- اضغط على زر "Fork" في أعلى الصفحة
-
-### **2. إنشاء فرع جديد**
-
-```bash
-git checkout -b feature/amazing-feature
-```
-
-### **3. إجراء التغييرات**
-
-- قم بالتعديلات المطلوبة
-- تأكد من جودة الكود
-
-### **4. Commit التغييرات**
-
-```bash
-git commit -m "Add amazing feature"
-```
-
-### **5. Push إلى الفرع**
-
-```bash
-git push origin feature/amazing-feature
-```
-
-### **6. إنشاء Pull Request**
-
-- اذهب إلى صفحة المشروع الأصلي
-- اضغط "New Pull Request"
-- اكتب وصفاً واضحاً للتغييرات
-
----
-
-## 📄 الترخيص
-
-هذا المشروع مرخص تحت رخصة MIT. راجع ملف [LICENSE](LICENSE) للتفاصيل.
-
----
-
-## 📞 الدعم والمساعدة
-
-إذا واجهت أي مشاكل أو لديك استفسارات:
-
-- **GitHub Issues:** [إنشاء issue جديد](https://github.com/MohammedFaisal0/u_chat_boot/issues)
-- **البريد الإلكتروني:** info@unichatai.com
-- **الهاتف:** +966 (123) 567-890
-
 ---
 
 <div align="center">
@@ -626,6 +500,6 @@ git push origin feature/amazing-feature
 
 ![University Logo](public/univ-chat-bot-logo.png)
 
-_آخر تحديث: ديسمبر 2024_
+_آخر تحديث: ديسمبر 2025_
 
 </div>
