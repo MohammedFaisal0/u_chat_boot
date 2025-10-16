@@ -233,10 +233,10 @@ const ChatWindow = ({ chat, onSendMessage }) => {
                 <MessageCircle className="text-white w-8 h-8" />
               </div>
               <h3 className="text-xl font-semibold text-[#1e40af] mb-2">
-                مرحباً بك في المحادثة!
+                {t('chat.welcome_title')}
               </h3>
               <p className="text-[#60a5fa]">
-                ابدأ المحادثة مع البوت الذكي
+                {t('chat.welcome_description')}
               </p>
             </div>
           </div>

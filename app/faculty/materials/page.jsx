@@ -15,7 +15,12 @@ import {
   XCircle,
   AlertCircle,
   PlusCircle,
-  RefreshCw
+  RefreshCw,
+  Edit,
+  Trash2,
+  Upload,
+  File,
+  X
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
@@ -26,6 +31,16 @@ export default function FacultyMaterialsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    course: "",
+    topic: ""
+  });
+  const [editFile, setEditFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { t, isRTL } = useI18n();
 
   useEffect(() => {
@@ -46,6 +61,96 @@ export default function FacultyMaterialsList() {
       } finally {
         setLoading(false);
       }
+  };
+
+  const handleEdit = (material) => {
+    setEditingMaterial(material);
+    setEditForm({
+      title: material.title || "",
+      description: material.description || "",
+      course: material.course || "",
+      topic: material.topic || ""
+    });
+    setEditFile(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append('title', editForm.title);
+      formData.append('description', editForm.description);
+      formData.append('course', editForm.course);
+      formData.append('topic', editForm.topic);
+      
+      if (editFile) {
+        formData.append('file', editFile);
+      }
+
+      const response = await fetch(`/api/faculty/materials/${editingMaterial._id}`, {
+        method: 'PUT',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update material');
+      }
+
+      // Update local state
+      const updatedMaterial = await response.json();
+      setMaterials(prev => prev.map(m => 
+        m._id === editingMaterial._id ? { ...m, ...updatedMaterial.material } : m
+      ));
+
+      setIsEditModalOpen(false);
+      setEditingMaterial(null);
+      setEditForm({ title: "", description: "", course: "", topic: "" });
+      setEditFile(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditFileChange = (e) => {
+    const selectedFile = e.target.files?.[0] || null;
+    setEditFile(selectedFile);
+  };
+
+  const removeEditFile = () => {
+    setEditFile(null);
+    const fileInput = document.querySelector('input[name="editFile"]');
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleDelete = async (materialId) => {
+    if (!confirm("Are you sure you want to delete this material?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/faculty/materials/${materialId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete material");
+      }
+
+      // Remove from local state
+      setMaterials(prev => prev.filter(m => m._id !== materialId));
+    } catch (error) {
+      console.error("Error deleting material:", error);
+      setError("Failed to delete material");
+    }
   };
 
   const getStatusIcon = (status) => {
@@ -187,6 +292,30 @@ export default function FacultyMaterialsList() {
                   {isRTL ? 'تحميل' : 'Download'}
                 </span>
               </a>
+            </>
+          )}
+          
+          {/* Edit and Delete buttons - only show for pending materials */}
+          {material.status === "pending" && (
+            <>
+              <button
+                onClick={() => handleEdit(material)}
+                className="flex items-center space-x-2 px-4 py-2 bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/30 rounded-xl hover:bg-[#f59e0b]/30 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+                <span className={`text-sm ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                  {isRTL ? 'تعديل' : 'Edit'}
+                </span>
+              </button>
+              <button
+                onClick={() => handleDelete(material._id)}
+                className="flex items-center space-x-2 px-4 py-2 bg-[#ef4444]/20 text-[#ef4444] border border-[#ef4444]/30 rounded-xl hover:bg-[#ef4444]/30 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className={`text-sm ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                  {isRTL ? 'حذف' : 'Delete'}
+                </span>
+              </button>
             </>
           )}
         </div>
@@ -392,6 +521,230 @@ export default function FacultyMaterialsList() {
           </div>
         )}
       </div>
+
+      {/* Edit Material Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
+          <div className="bg-[#f8fafc] rounded-2xl border border-[#dbeafe]/30 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-[#60a5fa] to-[#3b82f6] p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`text-2xl font-bold text-white ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                    {isRTL ? 'تعديل المادة' : 'Edit Material'}
+                  </h3>
+                  <p className="text-white/80 text-sm">
+                    {isRTL ? 'قم بتحديث معلومات المادة التعليمية' : 'Update the educational material information'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingMaterial(null);
+                    setEditForm({ title: "", description: "", course: "", topic: "" });
+                    setEditFile(null);
+                  }}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h4 className={`text-lg font-semibold text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                  {isRTL ? 'المعلومات الأساسية' : 'Basic Information'}
+                </h4>
+                
+                <div className="space-y-2">
+                  <label className={`block text-sm font-medium text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                    {isRTL ? 'عنوان المادة' : 'Material Title'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder={isRTL ? 'أدخل عنوان المادة التعليمية' : 'Enter the educational material title'}
+                    required
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl text-[#1e40af] placeholder-gray-500 focus:ring-2 focus:ring-[#60a5fa] focus:border-transparent"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className={`block text-sm font-medium text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                    {isRTL ? 'وصف المادة' : 'Material Description'}
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder={isRTL ? 'أدخل وصفاً مفصلاً للمادة التعليمية' : 'Enter a detailed description of the educational material'}
+                    rows="4"
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl text-[#1e40af] placeholder-gray-500 focus:ring-2 focus:ring-[#60a5fa] focus:border-transparent resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Course Information */}
+              <div className="space-y-4">
+                <h4 className={`text-lg font-semibold text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                  {isRTL ? 'معلومات المقرر' : 'Course Information'}
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={`block text-sm font-medium text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                      {isRTL ? 'اسم المقرر' : 'Course Name'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.course}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, course: e.target.value }))}
+                      placeholder={isRTL ? 'مثال: البرمجة 101' : 'e.g., Programming 101'}
+                      className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl text-[#1e40af] placeholder-gray-500 focus:ring-2 focus:ring-[#60a5fa] focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className={`block text-sm font-medium text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                      {isRTL ? 'الموضوع' : 'Topic'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.topic}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, topic: e.target.value }))}
+                      placeholder={isRTL ? 'مثال: أساسيات البرمجة' : 'e.g., Programming Fundamentals'}
+                      className="w-full px-4 py-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl text-[#1e40af] placeholder-gray-500 focus:ring-2 focus:ring-[#60a5fa] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* File Upload */}
+              <div className="space-y-4">
+                <h4 className={`text-lg font-semibold text-[#1e40af] ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                  {isRTL ? 'رفع الملف' : 'File Upload'}
+                </h4>
+                
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".pdf"
+                      onChange={handleEditFileChange}
+                      name="editFile"
+                      className="hidden"
+                      id="edit-file-upload"
+                    />
+                    <label 
+                      htmlFor="edit-file-upload" 
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-white/30 rounded-2xl cursor-pointer hover:border-[#60a5fa] hover:bg-white/5 transition-all duration-300"
+                    >
+                      <Upload className="w-8 h-8 text-[#60a5fa] mb-2" />
+                      <p className="text-sm text-[#1e40af]">
+                        {isRTL ? 'انقر لرفع ملف PDF جديد' : 'Click to upload new PDF file'}
+                      </p>
+                      <p className="text-xs text-[#60a5fa]">
+                        {isRTL ? 'أو اسحب وأفلت هنا' : 'or drag and drop here'}
+                      </p>
+                    </label>
+                  </div>
+
+                  {/* Current File Info */}
+                  {editingMaterial?.file_url && !editFile && (
+                    <div className="p-4 bg-[#dbeafe]/20 border border-[#60a5fa]/20 rounded-2xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <File className="w-8 h-8 text-[#60a5fa]" />
+                          <div>
+                            <p className="font-medium text-[#1e40af]">
+                              {isRTL ? 'الملف الحالي:' : 'Current file:'}
+                            </p>
+                            <p className="text-sm text-[#60a5fa]">
+                              {editingMaterial.file_url.split('/').pop()}
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href={editingMaterial.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#60a5fa] hover:text-[#3b82f6] transition-colors"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New File Preview */}
+                  {editFile && (
+                    <div className="p-4 bg-[#dbeafe]/20 border border-[#60a5fa]/20 rounded-2xl">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <File className="w-8 h-8 text-[#60a5fa]" />
+                          <div>
+                            <p className="font-medium text-[#1e40af]">
+                              {isRTL ? 'ملف جديد:' : 'New file:'}
+                            </p>
+                            <p className="text-sm text-[#60a5fa]">
+                              {editFile.name} ({(editFile.size / 1024 / 1024).toFixed(2)} MB)
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeEditFile}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center space-x-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  <p className="text-red-700">{error}</p>
+                </div>
+              )}
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingMaterial(null);
+                    setEditForm({ title: "", description: "", course: "", topic: "" });
+                    setEditFile(null);
+                  }}
+                  className="px-6 py-3 bg-[#dbeafe]/20 text-[#1e40af] border border-[#dbeafe]/30 rounded-2xl hover:bg-[#dbeafe]/30 transition-colors"
+                >
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-3 bg-gradient-to-r from-[#60a5fa] to-[#3b82f6] text-white rounded-2xl hover:from-[#3b82f6] hover:to-[#60a5fa] transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    isRTL ? 'جاري التحديث...' : 'Updating...'
+                  ) : (
+                    isRTL ? 'تحديث المادة' : 'Update Material'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

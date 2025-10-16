@@ -71,11 +71,8 @@ export async function POST(request) {
     const instructions = await getInstructions();
     console.log("📋 Loaded instructions:", instructions.length);
 
-    // Reset conversation history if instructions have changed
-    if (conversationHistory.length === 0 || 
-        (botInstructions && botInstructions.length !== instructions.length)) {
-      conversationHistory = []; // Reset to force reload with new instructions
-    }
+    // Always reset conversation history to ensure fresh instructions are loaded
+    conversationHistory = []; // Reset to force reload with new instructions
 
     if (conversationHistory.length === 0) {
       // Initialize conversation history with system instructions from database
@@ -84,26 +81,30 @@ export async function POST(request) {
         const combinedInstructions = instructions.join('\n\n---\n\n');
         conversationHistory = [{
           role: "system",
-          content: `أنت مساعد ذكي لطلاب جامعة الإمام محمد بن سعود الإسلامية. 
+          content: `You are an intelligent assistant for students at Imam Muhammad Ibn Saud Islamic University.
 
-تعليمات مهمة:
-- أجب على الأسئلة مباشرة من المرة الأولى إذا كانت واضحة ومحددة
-- إذا كان السؤال غامضاً أو غير واضح، اطلب توضيحاً محدداً
-- استخدم المعلومات المتاحة في التعليمات التالية للإجابة على الأسئلة الأكاديمية
-- أجب باللغة العربية بشكل مفيد ومختصر
-- أمثلة على الأسئلة الغامضة التي تحتاج توضيح:
-  * "معلومات" (غير محدد)
-  * "ساعدني" (بدون تفاصيل)
-  * "كيف" (بدون موضوع محدد)
-  * "متى" (بدون حدث محدد)
+CRITICAL LANGUAGE RULE:
+- ALWAYS detect the language of the user's question
+- If the question is in ENGLISH, respond ONLY in ENGLISH
+- If the question is in ARABIC, respond ONLY in ARABIC
+- NEVER mix languages in your response
+- NEVER start in one language and switch to another
 
-المعلومات المتاحة:
-${combinedInstructions}`,
+ACCURACY RULES:
+- Use ONLY the information provided in the following instructions
+- DO NOT invent or create information from outside sources
+- If information is not available, clearly state this and provide alternatives
+- Answer questions directly and clearly
+
+AVAILABLE INFORMATION:
+${combinedInstructions}
+
+REMEMBER: Respond in the EXACT SAME LANGUAGE as the user's question. No exceptions.`,
         }];
         console.log("🤖 Initialized conversation with all database instructions:", instructions.length);
       } else {
         // Fallback to default instruction if no instructions in database
-        const defaultInstruction = "أنت مساعد ذكي لطلاب جامعة الإمام محمد بن سعود الإسلامية. يمكنك مساعدتهم في الأسئلة الأكاديمية ومعلومات الجامعة والدعم التقني. أجب باللغة العربية بشكل مفيد ومختصر. أجب على الأسئلة مباشرة من المرة الأولى إذا كانت واضحة، وإذا كانت غامضة اطلب توضيحاً محدداً.";
+        const defaultInstruction = "أنت مساعد ذكي لطلاب جامعة الإمام محمد بن سعود الإسلامية. يمكنك مساعدتهم في الأسئلة الأكاديمية ومعلومات الجامعة والدعم التقني. أجب بنفس لغة السؤال (عربي للعربي، إنجليزي للإنجليزي). أجب على الأسئلة مباشرة من المرة الأولى إذا كانت واضحة، وإذا كانت غامضة اطلب توضيحاً محدداً. إذا لم تكن المعلومة متوفرة، قدم حلول بديلة أو اقتراحات مفيدة.";
         conversationHistory = [{
         role: "system",
           content: defaultInstruction,
@@ -136,12 +137,27 @@ ${combinedInstructions}`,
       // Generate intelligent responses based on the message content
       const msg = message.toLowerCase();
       
+      // Detect language and respond accordingly
+      const isArabic = /[\u0600-\u06FF]/.test(message);
+      
       if (msg.includes('مرحبا') || msg.includes('السلام') || msg.includes('hello') || msg.includes('hi')) {
-        reply = "مرحباً بك! أنا مساعدك الذكي في جامعة الإمام محمد بن سعود الإسلامية. كيف يمكنني مساعدتك اليوم؟";
+        if (isArabic) {
+          reply = "مرحباً بك! أنا مساعدك الذكي في جامعة الإمام محمد بن سعود الإسلامية. أستخدم فقط المعلومات المسندة إليني. كيف يمكنني مساعدتك اليوم؟";
+        } else {
+          reply = "Hello! I'm your smart assistant at Imam Muhammad Ibn Saud Islamic University. I use only the information assigned to me. How can I help you today?";
+        }
       } else if (msg.includes('مساعدة') || msg.includes('help') || msg.includes('ساعدني')) {
-        reply = "يمكنني مساعدتك في:\n\n📚 **الخدمات الأكاديمية:**\n- معلومات عن التخصصات\n- الجدول الدراسي\n- النتائج والدرجات\n\n🏫 **معلومات الجامعة:**\n- المواعيد المهمة\n- الخدمات الطلابية\n- الأنشطة والفعاليات\n\n💻 **الدعم التقني:**\n- مشاكل النظام\n- تسجيل الدخول\n- استخدام المنصة\n\nما الذي تحتاج مساعدة فيه تحديداً؟";
+        if (isArabic) {
+          reply = "يمكنني مساعدتك في:\n\n📚 **الخدمات الأكاديمية:**\n- معلومات عن التخصصات\n- الجدول الدراسي\n- النتائج والدرجات\n\n🏫 **معلومات الجامعة:**\n- المواعيد المهمة\n- الخدمات الطلابية\n- الأنشطة والفعاليات\n\n💻 **الدعم التقني:**\n- مشاكل النظام\n- تسجيل الدخول\n- استخدام المنصة\n\nما الذي تحتاج مساعدة فيه تحديداً؟";
+        } else {
+          reply = "I can help you with:\n\n📚 **Academic Services:**\n- Information about majors\n- Class schedule\n- Grades and results\n\n🏫 **University Information:**\n- Important dates\n- Student services\n- Activities and events\n\n💻 **Technical Support:**\n- System issues\n- Login problems\n- Platform usage\n\nWhat specific help do you need?";
+        }
       } else if (msg.includes('شكرا') || msg.includes('thanks') || msg.includes('ممتاز') || msg.includes('جيد')) {
-        reply = "العفو! سعيد أن أتمكن من مساعدتك. هل لديك أي أسئلة أخرى؟";
+        if (isArabic) {
+          reply = "العفو! سعيد أن أتمكن من مساعدتك. هل لديك أي أسئلة أخرى؟";
+        } else {
+          reply = "You're welcome! I'm glad I could help. Do you have any other questions?";
+        }
       } else if (msg.includes('جامعة') || msg.includes('university') || msg.includes('الجامعة')) {
         reply = "جامعة الإمام محمد بن سعود الإسلامية هي إحدى أعرق الجامعات في المملكة العربية السعودية. يمكنني مساعدتك في:\n\n- معلومات عن التخصصات المتاحة\n- شروط القبول\n- الخدمات الطلابية\n- المواعيد المهمة\n\nما الذي تود معرفته عن الجامعة؟";
       } else if (msg.includes('نتائج') || msg.includes('درجات') || msg.includes('marks') || msg.includes('grades')) {
@@ -180,7 +196,11 @@ ${combinedInstructions}`,
         } else if (msg.includes('object') || msg.includes('relational') || msg.includes('inheritance')) {
           reply = "بناءً على المعلومات المتاحة:\n\n**Object-Relational Database Systems:**\n- توفر نظام أنواع أكثر ثراءً\n- تدعم أنواع البيانات المعقدة والتوجه للكائنات\n\n**Type Inheritance:**\n- يمكن إنشاء أنواع جديدة تحت أنواع موجودة\n- مثال: Student تحت Person, Teacher تحت Person\n\n**Table Inheritance:**\n- الجداول يمكن أن ترث من جداول أخرى\n- يدعم PostgreSQL و Oracle\n\n**Object-Relational Mapping (ORM):**\n- يسمح بتحديد التخطيط بين كائنات لغة البرمجة وصفوف قاعدة البيانات\n- إنشاء وتحديث وحذف تلقائي";
         } else {
-          reply = "شكراً لرسالتك! أنا هنا لمساعدتك في جميع استفساراتك حول جامعة الإمام محمد بن سعود الإسلامية.\n\nيمكنني مساعدتك في:\n- المعلومات الأكاديمية\n- الخدمات الطلابية\n- الدعم التقني\n- التوجيه والإرشاد\n\nما الذي تود معرفته أو الاستفسار عنه؟";
+          if (isArabic) {
+            reply = "أعتذر، لكن المعلومات التي تطلبها غير متوفرة في التعليمات المسندة إلي. يمكنني مساعدتك في:\n\n- المعلومات الأكاديمية المتوفرة في التعليمات\n- الخدمات الطلابية المعرفة\n- الدعم التقني الأساسي\n\nيرجى طرح سؤال محدد حول المعلومات المتوفرة، أو تواصل مع الإدارة للحصول على معلومات إضافية.";
+          } else {
+            reply = "I apologize, but the information you're asking for is not available in the instructions assigned to me. I can help you with:\n\n- Academic information available in my instructions\n- Defined student services\n- Basic technical support\n\nPlease ask a specific question about available information, or contact the administration for additional information.";
+          }
         }
       }
     } else {

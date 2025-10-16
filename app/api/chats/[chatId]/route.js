@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Chat from "@/models/Chat";
+import Student from "@/models/Student";
 import { cookies } from "next/headers";
 import { verifyAuth } from "@/lib/auth";
 

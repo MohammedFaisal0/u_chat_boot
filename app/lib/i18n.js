@@ -188,6 +188,8 @@ const translations = {
     'chat.rename': 'Rename',
     'chat.name_required': 'Please enter a name',
     'chat.confirm_unsave': 'Are you sure you want to unsave this conversation?',
+    'chat.welcome_title': 'Welcome to Chat!',
+    'chat.welcome_description': 'Start chatting with the AI assistant',
 
     // Issues
     'issue.report_issue': 'Report Issue',
@@ -530,6 +532,8 @@ const translations = {
     'chat.rename': 'إعادة تسمية',
     'chat.name_required': 'يرجى إدخال اسم',
     'chat.confirm_unsave': 'هل أنت متأكد من إلغاء حفظ هذه المحادثة؟',
+    'chat.welcome_title': 'مرحباً بك في المحادثة!',
+    'chat.welcome_description': 'ابدأ المحادثة مع البوت الذكي',
 
     // Issues
     'issue.report_issue': 'الإبلاغ عن مشكلة',
