@@ -54,19 +54,20 @@ const TeamSection = () => {
   
   const teamMembers = [
     {
-      id: "443016792",
-      name: "Maen Mohammed Alharbi",
+      id: "443016529",
+      name: "Turki Meteb Almaslooki",
       number: "1",
       avatarUrl: "/student1.png",
       delay: 0
     },
     {
-      id: "443016529",
-      name: "Turki Meteb Almaslooki",
+      id: "443016792",
+      name: "Maen Mohammed Alharbi",
       number: "2",
       avatarUrl: "/student2.png",
-      delay: 200
+      delay: 0
     },
+
   ];
 
   return (
