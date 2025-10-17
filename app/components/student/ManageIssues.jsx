@@ -11,7 +11,8 @@ import {
   MessageCircle,
   User,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import AddIssueModal from "./AddIssueModal";
 import { useI18n } from "@/lib/i18n";
@@ -112,6 +113,29 @@ export default function ManageIssues({ accountId }) {
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setCurrentPage(1);
+  };
+
+  const handleDeleteIssue = async (issueId) => {
+    if (!confirm("Are you sure you want to delete this issue? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/issues/${issueId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete issue");
+      }
+
+      // Remove from local state
+      setIssues(prev => prev.filter(issue => issue._id !== issueId));
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+      setError("Failed to delete issue");
+    }
   };
 
   const handlePageChange = (newPage) => {
@@ -248,6 +272,9 @@ export default function ManageIssues({ accountId }) {
                     <th className={`px-6 py-4 text-left text-xs font-medium text-[#1e40af] uppercase tracking-wider ${isRTL ? 'font-arabic' : 'font-latin'}`}>
                       {t('issues.date')}
                     </th>
+                    <th className={`px-6 py-4 text-left text-xs font-medium text-[#1e40af] uppercase tracking-wider ${isRTL ? 'font-arabic' : 'font-latin'}`}>
+                      {isRTL ? 'الإجراءات' : 'Actions'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white/5 divide-y divide-white/20">
@@ -311,11 +338,22 @@ export default function ManageIssues({ accountId }) {
                             </span>
                           </div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleDeleteIssue(issue._id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title={isRTL ? 'حذف المشكلة' : 'Delete Issue'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center">
+                      <td colSpan="7" className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center space-y-4">
                           <AlertTriangle className="w-12 h-12 text-[#60a5fa]" />
                           <p className={`text-[#1e40af] text-lg ${isRTL ? 'font-arabic' : 'font-latin'}`}>
