@@ -59,7 +59,10 @@ const ChatWindow = ({ chat, onSendMessage }) => {
           method: "POST",
           credentials: 'include',
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: messageToSend }),
+          body: JSON.stringify({ 
+            message: messageToSend,
+            chatId: chat._id // إرسال معرف المحادثة
+          }),
         });
 
         console.log("Groq response status:", response.status);

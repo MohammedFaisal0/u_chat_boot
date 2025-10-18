@@ -5,6 +5,8 @@ import Groq from "groq-sdk";
 import dbConnect from "@/lib/db";
 import "@/lib/models";
 import ChatbotInstruction from "@/models/ChatbotInstruction";
+import Chat from "@/models/Chat";
+import ChatMessage from "@/models/ChatMessage";
 import { jwtVerify } from "jose";
 
 // Load environment variables explicitly
@@ -16,6 +18,27 @@ const groq = new Groq({
 
 let conversationHistory = [];
 let botInstructions = null;
+
+// Function to load conversation history from database
+async function loadConversationHistory(chatId) {
+  try {
+    await dbConnect();
+    const chat = await Chat.findById(chatId).populate('messages');
+    if (!chat || !chat.messages) return [];
+    
+    // Convert database messages to conversation format
+    const history = chat.messages.map(msg => ({
+      role: msg.from === 'student' ? 'user' : 'assistant',
+      content: msg.message_text
+    }));
+    
+    console.log("📚 Loaded conversation history:", history.length, "messages");
+    return history;
+  } catch (error) {
+    console.error("Error loading conversation history:", error);
+    return [];
+  }
+}
 
 async function getInstructions() {
   // Always fetch fresh instructions to ensure we have the latest updates
@@ -65,23 +88,20 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { message } = body;
+    const { message, chatId } = body;
 
-    // Always fetch fresh instructions to ensure we have the latest updates
+    // Always load fresh instructions to ensure we have the latest updates
     const instructions = await getInstructions();
-    console.log("📋 Loaded instructions:", instructions.length);
-
-    // Always reset conversation history to ensure fresh instructions are loaded
-    conversationHistory = []; // Reset to force reload with new instructions
-
-    if (conversationHistory.length === 0) {
-      // Initialize conversation history with system instructions from database
-      if (instructions.length > 0) {
-        // Combine all instructions into one comprehensive system instruction
-        const combinedInstructions = instructions.join('\n\n---\n\n');
-        conversationHistory = [{
-          role: "system",
-          content: `# Role and Objective
+    console.log("📋 Loaded instructions:", instructions);
+    
+    // Initialize system instructions
+    let systemInstruction = null;
+    if (instructions.length > 0) {
+      // Combine all instructions into one comprehensive system instruction
+      const combinedInstructions = instructions.join('\n\n---\n\n');
+      systemInstruction = {
+        role: "system",
+        content: `# Role and Objective
 You are an intelligent assistant tasked with supporting students at Imam Muhammad Ibn Saud Islamic University by providing precise, language-matched responses strictly based on the provided conversation content.
 
 # Instructions
@@ -123,29 +143,48 @@ ${combinedInstructions}
 
 # Reminder
 Always reply exactly in the user's question language, without exception.`,
-        }];
-        console.log("🤖 Initialized conversation with all database instructions:", instructions.length);
-      } else {
-        // Fallback to default instruction if no instructions in database
-        const defaultInstruction = "أنت مساعد ذكي لطلاب جامعة الإمام محمد بن سعود الإسلامية. يمكنك مساعدتهم في الأسئلة الأكاديمية ومعلومات الجامعة والدعم التقني. أجب بنفس لغة السؤال (عربي للعربي، إنجليزي للإنجليزي). أجب على الأسئلة مباشرة من المرة الأولى إذا كانت واضحة، وإذا كانت غامضة اطلب توضيحاً محدداً. إذا لم تكن المعلومة متوفرة، قدم حلول بديلة أو اقتراحات مفيدة.";
-        conversationHistory = [{
+      };
+    } else {
+      // Fallback to default instruction if no instructions in database
+      const defaultInstruction = "أنت مساعد ذكي لطلاب جامعة الإمام محمد بن سعود الإسلامية. يمكنك مساعدتهم في الأسئلة الأكاديمية ومعلومات الجامعة والدعم التقني. أجب بنفس لغة السؤال (عربي للعربي، إنجليزي للإنجليزي). أجب على الأسئلة مباشرة من المرة الأولى إذا كانت واضحة، وإذا كانت غامضة اطلب توضيحاً محدداً. إذا لم تكن المعلومة متوفرة، قدم حلول بديلة أو اقتراحات مفيدة.";
+      systemInstruction = {
         role: "system",
-          content: defaultInstruction,
-        }];
-        console.log("🤖 Initialized conversation with fallback instruction");
+        content: defaultInstruction,
+      };
+    }
+
+    // Load conversation history from database if chatId is provided
+    if (chatId) {
+      const dbHistory = await loadConversationHistory(chatId);
+      if (dbHistory.length > 0) {
+        // Always start with system instructions, then add database history
+        conversationHistory = [systemInstruction, ...dbHistory];
+        console.log("🔄 Using existing conversation history with system instructions", conversationHistory.length, "messages");
+      } else {
+        // If no database history, start with just system instructions
+        conversationHistory = [systemInstruction];
+        console.log("🆕 Starting new conversation with system instructions");
+      }
+    } else {
+      // If no chatId, use global conversation history (fallback for compatibility)
+      console.log("⚠️ No chatId provided, using global conversation history");
+      // Ensure system instructions are always present
+      if (conversationHistory.length === 0 || conversationHistory[0].role !== "system") {
+        conversationHistory = [systemInstruction];
       }
     }
 
     // Add user message to conversation history
     conversationHistory.push({ role: "user", content: message });
+    console.log("💬 Conversation history length:", conversationHistory.length);
 
-    // Keep conversation history manageable (max 10 messages)
-    if (conversationHistory.length > 10) {
-      // Keep system instruction and last 9 messages
-      conversationHistory = [
-        conversationHistory[0], // system instruction
-        ...conversationHistory.slice(-9) // last 9 messages
-      ];
+    // Keep conversation history manageable (max 20 messages for better context)
+    if (conversationHistory.length > 20) {
+      // Always keep system instruction as first element and last 19 messages
+      const systemInstructionToKeep = conversationHistory[0];
+      const recentMessages = conversationHistory.slice(-19);
+      conversationHistory = [systemInstructionToKeep, ...recentMessages];
+      console.log("🔄 Trimmed conversation history to 20 messages (system + 19 recent)");
     }
 
     let reply;
@@ -296,6 +335,35 @@ Always reply exactly in the user's question language, without exception.`,
 
     // Add AI response to conversation history
     conversationHistory.push({ role: "assistant", content: reply });
+
+    // Save messages to database if chatId is provided
+    if (chatId) {
+      try {
+        await dbConnect();
+        
+        // Save user message
+        const userMessage = new ChatMessage({
+          chat: chatId,
+          message_text: message,
+          from: 'student',
+          time_sent: new Date()
+        });
+        await userMessage.save();
+        
+        // Save AI response
+        const aiMessage = new ChatMessage({
+          chat: chatId,
+          message_text: reply,
+          from: 'ai',
+          time_sent: new Date()
+        });
+        await aiMessage.save();
+        
+        console.log("💾 Messages saved to database");
+      } catch (error) {
+        console.error("Error saving messages to database:", error);
+      }
+    }
 
     return NextResponse.json({ reply });
   } catch (error) {

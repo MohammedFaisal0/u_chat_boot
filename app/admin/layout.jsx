@@ -7,32 +7,32 @@ import { redirect } from "next/navigation";
 export default async function adminlayout({ children }) {
   const cookiestore = cookies();
   const token = cookiestore.get("token");
-  console.log("Token from cookies:", token);
+ // console.log("Token from cookies:", token);
 
   if (!token) {
-    console.log("No token found, redirecting to login");
+   // console.log("No token found, redirecting to login");
     redirect("/login");
   }
 
   try {
-    console.log("Verifying token:", token.value);
+   // console.log("Verifying token:", token.value);
     const payload = await verifyAuth(token.value);
-    console.log("Token verified successfully. Payload:", payload);
+   // console.log("Token verified successfully. Payload:", payload);
     
     const { accountType, accountId } = payload;
-    console.log("AccountType:", accountType, "AccountId:", accountId);
+   // console.log("AccountType:", accountType, "AccountId:", accountId);
 
     if (!accountId) {
-      console.log("Access denied - no accountId in payload");
+     // console.log("Access denied - no accountId in payload");
       redirect("/login");
     }
 
     if (accountType !== "admin") {
-      console.log("Access denied - not admin, accountType is:", accountType);
+     //  console.log("Access denied - not admin, accountType is:", accountType);
       redirect("/login");
     }
 
-    console.log("Admin access granted, rendering dashboard");
+   // console.log("Admin access granted, rendering dashboard");
 
     return (
       <AuthProvider accountId={accountId}>
